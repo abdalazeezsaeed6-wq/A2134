@@ -9,8 +9,8 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); padding: 20px; color: var(--text); }
         .container { max-width: 450px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .header { text-align: center; margin-bottom: 20px; }
-        /* تنسيق الشعار ليظهر بشكل ممتاز */
-        .logo { width: 180px; height: auto; margin-bottom: 10px; border-radius: 10px; }
+        /* تنسيق الشعار ليظهر بشكل ممتاز في منتصف الصفحة */
+        .logo { width: 180px; height: auto; margin-bottom: 15px; border-radius: 10px; }
         h2 { text-align: center; color: var(--primary); margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.9em; }
         input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
@@ -67,7 +67,14 @@
         const type = document.getElementById("type").value;
         const branchSelect = document.getElementById("branch");
         branchSelect.innerHTML = '<option value="">-- اختر الفرع --</option>';
-        let list = (type === "Electricity") ? ["حضرموت الوادي والصحراء", "حضرموت ساحل"] : ["فرع الشحر", "فرع سيؤن", "فرع تريم", "فرع القطن", "فرع المكلا"];
+        
+        let list = [];
+        if (type === "Electricity") {
+            list = ["حضرموت الوادي والصحراء", "حضرموت ساحل"];
+        } else if (type === "Water") {
+            list = ["فرع الشحر", "فرع سيؤن", "فرع تريم", "فرع القطن", "فرع المكلا", "فرع غيل باوزير"];
+        }
+
         list.forEach(b => {
             let opt = document.createElement("option");
             opt.value = b; opt.innerText = b;
@@ -79,18 +86,26 @@
         const type = document.getElementById("type").value;
         const branch = document.getElementById("branch").value;
         const id = document.getElementById("subId").value.trim();
+        
         if (!type || !branch || !id) return alert("يرجى إكمال البيانات");
 
+        // تحويل الرابط للمسار الصحيح في قاعدة بياناتك
         const path = `${DB}/Bills/${encodeURIComponent(type)}/${encodeURIComponent(branch)}/${id}.json`;
+
         try {
             const res = await fetch(path);
             const data = await res.json();
-            if (!data) return alert("لم يتم العثور على بيانات.");
+            
+            if (!data) return alert("لم يتم العثور على بيانات لهذا الرقم.");
+
             document.getElementById("custName").innerText = data.customerName;
             document.getElementById("custAmount").innerText = data.amount + " ريال";
+            
             document.getElementById("searchPage").style.display = "none";
             document.getElementById("resultPage").style.display = "block";
-        } catch (e) { alert("خطأ في الاتصال."); }
+        } catch (e) {
+            alert("حدث خطأ في الاتصال بالخادم.");
+        }
     }
 
     function backToSearch() {
