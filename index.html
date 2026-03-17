@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إستعلاماتي - استعلام فواتير الكهرباء والمياه</title>
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --accent-color: #dc3545;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 450px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            background: #fff;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .logo {
+            width: 140px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        .content { padding: 25px; }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1.5px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        select:focus, input:focus { border-color: var(--primary-color); box-shadow: 0 0 5px rgba(13,110,253,0.2); }
+
+        .btn-main {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-main:hover { background-color: #0b5ed7; transform: translateY(-2px); }
+
+        .result-box {
+            display: none;
+            background: #f1f3f4;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 10px;
+            border-right: 5px solid var(--primary-color);
+        }
+
+        .result-row { margin-bottom: 10px; font-size: 16px; }
+        .result-label { color: #666; font-size: 14px; display: block; }
+        .result-value { font-weight: bold; color: #222; }
+        .price { color: var(--accent-color); font-size: 20px; }
+
+        .btn-back {
+            background-color: #6c757d;
+            margin-top: 15px;
+        }
+
+        .footer-text { text-align: center; color: #999; font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <img src="https://i.ibb.co/3M6r9f4/my-inquiries-logo.png" alt="إستعلاماتي" class="logo">
+        <div style="font-weight: bold; color: #0d6efd;">بوابة الاستعلام الذكية</div>
+    </div>
+
+    <div id="queryUI" class="content">
+        <label>نوع الخدمة</label>
+        <select id="billType" onchange="updateBranches()">
+            <option value="">-- اختر النوع --</option>
+            <option value="Electricity">كهرباء</option>
+            <option value="Water">مياه</option>
+        </select>
+
+        <label>المنطقة / الفرع</label>
+        <select id="branchArea">
+            <option value="">اختر النوع أولاً</option>
+        </select>
+
+        <label id="idTitle">رقم المشترك</label>
+        <input type="text" id="subscriberId" placeholder="أدخل الرقم هنا..." inputmode="numeric">
+
+        <button class="btn-main" onclick="fetchBill()">استعلام الآن</button>
+        <div class="footer-text">نظام إستعلاماتي الموحد - 2026</div>
+    </div>
+
+    <div id="resultUI" class="content" style="display: none;">
+        <h3 style="text-align: center; margin-top: 0;">تفاصيل الفاتورة</h3>
+        <div class="result-box">
+            <div class="result-row">
+                <span class="result-label">اسم المشترك:</span>
+                <span class="result-value" id="resName"></span>
+            </div>
+            <div class="result-row">
+                <span class="result-label">المبلغ المطلوب سداده:</span>
+                <span class="result-value price" id="resAmount"></span>
+            </div>
+        </div>
+        <button class="btn-main" style="margin-top: 20px;" onclick="window.open('https://wa.me/967xxxxxx')">تسديد عبر الواتساب</button>
+        <button class="btn-main btn-back" onclick="resetForm()">رجوع للبحث</button>
+    </div>
+</div>
+
+<script>
+    const FIREBASE_URL = "https://question-738f7-default-rtdb.firebaseio.com/Bills";
+
+    function updateBranches() {
+        const type = document.getElementById("billType").value;
+        const branchSelect = document.getElementById("branchArea");
+        const title = document.getElementById("idTitle");
+        
+        branchSelect.innerHTML = '<option value="">-- اختر المنطقة --</option>';
+        
+        if(type === "Electricity") {
+            title.innerText = "رقم المشترك";
+            ["حضرموت الوادي والصحراء", "حضرموت ساحل"].forEach(b => branchSelect.innerHTML += `<option value="${b}">${b}</option>`);
+        } else if(type === "Water") {
+            title.innerText = "رقم الاتفاقية";
+            ["فرع سيئون", "فرع تريم", "فرع الشحر", "فرع المكلا", "فرع القطن", "فرع شبام"].forEach(b => branchSelect.innerHTML += `<option value="${b}">${b}</option>`);
+        }
+    }
+
+    async function fetchBill() {
+        const type = document.getElementById("billType").value;
+        const branch = document.getElementById("branchArea").value;
+        let id = document.getElementById("subscriberId").value.trim();
+
+        // تحويل الأرقام العربية إلى إنجليزية لضمان البحث
+        id = id.replace(/[٠-٩]/g, d => d.charCodeAt(0) - 1632);
+
+        if(!type || !branch || !id) return alert("يرجى إكمال جميع الحقول");
+
+        const fullUrl = `${FIREBASE_URL}/${encodeURIComponent(type)}/${encodeURIComponent(branch)}/${encodeURIComponent(id)}.json`;
+
+        try {
+            const response = await fetch(fullUrl);
+            const data = await response.json();
+
+            if(data) {
+                document.getElementById("resName").innerText = data.customerName;
+                document.getElementById("resAmount").innerText = data.amount + " ريال";
+                document.getElementById("queryUI").style.display = "none";
+                document.getElementById("resultUI").style.display = "block";
+                document.querySelector(".result-box").style.display = "block";
+            } else {
+                alert("عذراً، لا توجد بيانات لهذا الرقم في المنطقة المختارة.");
+            }
+        } catch(e) {
+            alert("خطأ في الاتصال بقاعدة البيانات");
+        }
+    }
+
+    function resetForm() {
+        document.getElementById("subscriberId").value = "";
+        document.getElementById("resultUI").style.display = "none";
+        document.getElementById("queryUI").style.display = "block";
+    }
+</script>
+
+</body>
+</html>
